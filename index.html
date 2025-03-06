@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSA Sendung</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.0.0/openseadragon.min.js"></script>
+    <style>
+        html, body { margin: 0; height: 100%; overflow: hidden; background-color: black; }
+        #openseadragon { width: 100%; height: 100vh; }
+    </style>
+</head>
+<body>
+
+    <div id="openseadragon"></div>
+
+    <script>
+        const totalPages = 5;
+        let currentPage = 0;
+        let viewer = OpenSeadragon({
+            id: "openseadragon",
+            prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
+            tileSources: {
+                type: 'image',
+                url: `images/page_${currentPage}.jpg`
+            },
+            showNavigator: true,
+            animationTime: 0.5,
+            blendTime: 0.1,
+            constrainDuringPan: false,
+            maxZoomPixelRatio: 2,
+            minZoomLevel: 1,
+            visibilityRatio: 1,
+            zoomPerSecond: 1,
+        });
+
+        function loadImage(page) {
+            viewer.open({
+                type: 'image',
+                url: `images/page_${page}.jpg`
+            });
+        }
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key >= "1" && event.key <= totalPages.toString()) {
+                currentPage = parseInt(event.key) - 1;
+                loadImage(currentPage);
+            }
+        });
+
+        loadImage(currentPage);
+    </script>
+
+</body>
+</html>
