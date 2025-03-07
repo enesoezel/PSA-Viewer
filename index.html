@@ -3,53 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PSA Sendung</title>
+    <title>TCG Card Viewer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.0.0/openseadragon.min.js"></script>
     <style>
         html, body { margin: 0; height: 100%; overflow: hidden; background-color: black; }
-        #openseadragon { width: 100%; height: 100vh; }
+        #openseadragon { width: 100%; height: 100vh; transition: opacity 0.5s; }
+        #loading { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 24px; }
+        .controls { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+        .btn { background: rgba(255, 255, 255, 0.8); border: none; cursor: pointer; }
+        .thumbnails { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+        .thumbnails img { width: 50px; cursor: pointer; opacity: 0.6; transition: 0.3s; }
+        .thumbnails img.active { opacity: 1; border: 2px solid yellow; }
     </style>
 </head>
 <body>
-
-    <div id="openseadragon"></div>
-
+    <div id="loading">Loading...</div>
+    <div id="openseadragon" role="main" aria-label="Image Viewer"></div>
+    <div class="thumbnails" id="thumbnailContainer"></div>
+    <div class="controls">
+        <button class="btn" id="prevBtn">◀</button>
+        <button class="btn" id="nextBtn">▶</button>
+    </div>
     <script>
-        const totalPages = 5;
+        const totalPages = 4;
         let currentPage = 0;
-        let viewer = OpenSeadragon({
-            id: "openseadragon",
-            prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
-            tileSources: {
-                type: 'image',
-                url: `images/page_${currentPage}.jpg`
-            },
-            showNavigator: true,
-            animationTime: 0.5,
-            blendTime: 0.1,
-            constrainDuringPan: false,
-            maxZoomPixelRatio: 2,
-            minZoomLevel: 1,
-            visibilityRatio: 1,
-            zoomPerSecond: 1,
-        });
+        let viewer;
+
+        function initializeViewer() {
+            viewer = OpenSeadragon({
+                id: "openseadragon",
+                prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
+                tileSources: { type: 'image', url: `images/page_${currentPage}.jpg` },
+                showNavigator: true,
+                animationTime: 0.5,
+                blendTime: 0.1,
+                maxZoomPixelRatio: 5,
+                minZoomLevel: 0.5,
+                visibilityRatio: 1,
+                zoomPerSecond: 1,
+            });
+            viewer.addHandler('open', () => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById("openseadragon").style.opacity = 1;
+                updateThumbnails();
+                preloadImages();
+            });
+
+            document.addEventListener("keydown", handleKeydown);
+            document.getElementById("prevBtn").addEventListener("click", () => loadImage(currentPage - 1));
+            document.getElementById("nextBtn").addEventListener("click", () => loadImage(currentPage + 1));
+
+            const thumbnailContainer = document.getElementById("thumbnailContainer");
+            for (let i = 0; i < totalPages; i++) {
+                const img = document.createElement("img");
+                img.src = `images/page_${i}.jpg`;
+                img.addEventListener("click", () => loadImage(i));
+                thumbnailContainer.appendChild(img);
+            }
+            loadImage(currentPage);
+        }
 
         function loadImage(page) {
-            viewer.open({
-                type: 'image',
-                url: `images/page_${page}.jpg`
+            if (page < 0 || page >= totalPages) return;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById("openseadragon").style.opacity = 0;
+            viewer.open({ type: 'image', url: `images/page_${page}.jpg` });
+            currentPage = page;
+            updateThumbnails();
+        }
+
+        function updateThumbnails() {
+            document.querySelectorAll(".thumbnails img").forEach((img, index) => {
+                img.classList.toggle("active", index === currentPage);
             });
         }
 
-        document.addEventListener("keydown", (event) => {
-            if (event.key >= "1" && event.key <= totalPages.toString()) {
-                currentPage = parseInt(event.key) - 1;
-                loadImage(currentPage);
-            }
-        });
+        function preloadImages() {
+            [currentPage - 1, currentPage + 1].forEach(page => {
+                if (page >= 0 && page < totalPages) {
+                    new Image().src = `images/page_${page}.jpg`;
+                }
+            });
+        }
 
-        loadImage(currentPage);
+        function handleKeydown(event) {
+            if (event.key === "ArrowRight") loadImage(currentPage + 1);
+            if (event.key === "ArrowLeft") loadImage(currentPage - 1);
+            if (event.key === "+") viewer.viewport.zoomBy(1.2);
+            if (event.key === "-") viewer.viewport.zoomBy(0.8);
+            if (event.key === "Escape") viewer.viewport.goHome();
+        }
+
+        window.onload = initializeViewer;
     </script>
-
 </body>
 </html>
